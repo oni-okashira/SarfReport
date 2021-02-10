@@ -9,3 +9,4 @@ D:\ZZZ-PL\mine\SarfReport\SarfReport\SarfReport\obj\Debug\netcoreapp2.1\SarfRepo
 D:\ZZZ-PL\mine\SarfReport\SarfReport\SarfReport\obj\Debug\netcoreapp2.1\SarfReport.AssemblyInfo.cs
 D:\ZZZ-PL\mine\SarfReport\SarfReport\SarfReport\obj\Debug\netcoreapp2.1\SarfReport.dll
 D:\ZZZ-PL\mine\SarfReport\SarfReport\SarfReport\obj\Debug\netcoreapp2.1\SarfReport.pdb
+D:\ZZZ-PL\mine\SarfReport\SarfReport\SarfReport\bin\Debug\netcoreapp2.1\appsettings.json
