@@ -1,14 +1,10 @@
-﻿using OpenQA.Selenium;
+﻿using Microsoft.Extensions.Configuration;
+using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Extensions.Hosting;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using System.IO;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 
@@ -21,8 +17,10 @@ namespace SarfReport
             var config = InitConfig();
             var report = GetSurfReport();
             SendSms(config, report);
-            
-            Console.ReadKey();
+
+            //Console.WriteLine(report);
+
+            //Console.ReadKey();
         }
         static IConfigurationRoot InitConfig()
         {
@@ -35,7 +33,8 @@ namespace SarfReport
             return builder.Build();
         }
 
-        static string GetSurfReport() {
+        static string GetSurfReport()
+        {
             StringBuilder sb = new StringBuilder();
             DateTime today = DateTime.Now.Date;
 
@@ -43,41 +42,44 @@ namespace SarfReport
             driver.Navigate().GoToUrl("https://www.surfline.com/surf-forecasts/virginia/58581a836630e24c44878fdc");
             driver.Manage().Window.Maximize();
 
-            //start with line break
-            sb.Append("\n");
+            sb.Append($"\n\n");
 
-            //use wait to avoid race conditions
-            IList<IWebElement> forecasts = new WebDriverWait(driver, TimeSpan.FromSeconds(2)).Until(d => d.FindElements(By.ClassName("quiver-condition-day-summary__condition")));
-            for (var i = 0; i < forecasts.Count; i++)
+            IList<IWebElement> dayForecasts = new WebDriverWait(driver, TimeSpan.FromSeconds(2)).Until(e => e.FindElements(By.ClassName("quiver-forecast-graphs__day-summary")));
+            foreach (IWebElement forecast in dayForecasts)
             {
-                //group forecast by two, for am and pm
-                if (i % 2 == 0)
-                {
-                    sb.Append($"{today.Date: MM/dd/yyyy} - ");
-                }
+                var conditions = forecast.FindElements(By.ClassName("quiver-condition-day-summary__condition__rating"));
+                var surfHeight = forecast.FindElements(By.ClassName("quiver-surf-height"));
 
-                var condition = forecasts[i].GetAttribute("class");
-                condition = condition.Substring((condition.IndexOf("--") + 2), condition.Length - condition.IndexOf("--") - 2);
-                sb.Append($"{condition}");
-                if (i % 2 == 0)
+                for (int i = 0; i < conditions.Count; i++)
                 {
-                    sb.Append(" (am)   ");
-                }
-                else
-                {
-                    sb.Append(" (pm) \n\n");
-                    today = today.AddDays(1);
+                    if (i % 2 == 0)
+                    {
+                        sb.Append($"{today.Date: MM/dd/yyyy}\n");
+                    }
+                    else
+                    {
+                        today = today.AddDays(1);
+                    }
+
+
+                    string rating = $"{GetRating(conditions[i].Text) * 10}%";
+                    string height = surfHeight[i].Text;
+
+                    sb.Append($"{rating} : {height} \n");
+
+                    if (i % 2 != 0) {
+                        sb.Append("\n");
+                    }
+
                 }
             }
-            
-            //Close the browser
-            driver.Close();
 
             return sb.ToString();
 
-        }        
+        }
 
-        static void SendSms(IConfigurationRoot config, string message) {
+        static void SendSms(IConfigurationRoot config, string message)
+        {
             string accountSid = config.GetSection("Twilio").GetValue<string>("TWILIO_ACCOUNT_SID");
             string authToken = config.GetSection("Twilio").GetValue<string>("TWILIO_AUTH_TOKEN");
 
@@ -90,6 +92,47 @@ namespace SarfReport
                );
 
             Console.WriteLine(sms.Sid);
+        }
+
+        static int GetRating(string condition) {
+            int result = 0;
+            switch (condition.ToLower())
+            {
+                case "flat":
+                    result = 1;
+                    break;
+                case "very poor":
+                    result = 2;
+                    break;
+                case "poor":
+                    result = 3;
+                    break;
+                case "poor to fair":
+                    result = 4;
+                    break;
+                case "fair":
+                    result = 5;
+                    break;
+                case "fair to good":
+                    result = 6;
+                    break;
+                case "good":
+                    result = 7;
+                    break;
+                case "very good":
+                    result = 8;
+                    break;
+                case "good to epic":
+                    result = 9;
+                    break;
+                case "epic":
+                    result = 10;
+                    break;
+
+                default:
+                    return 0;
+            }
+            return result;
         }
     }
 }
